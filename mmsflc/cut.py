@@ -8,6 +8,13 @@ from pathlib import Path
 from mmsflc.segment import Match
 
 
+def export_matches(recording: Path, dest: Path, matches: list[Match]) -> list[Path]:
+    return [
+        cut_match(recording, match, dest, index)
+        for index, match in enumerate(matches, start=1)
+    ]
+
+
 def cut_match(mpd: Path, match: Match, dest: Path, index: int) -> Path:
     dest.mkdir(parents=True, exist_ok=True)
     game = match.game if match.game else 0

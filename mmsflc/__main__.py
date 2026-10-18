@@ -1,6 +1,8 @@
-"""Scan sampled frames and print match ranges.
+"""Cut finished matches out of one recording.
 
-    python -m mmsflc tmp/scan/may15
+    python -m mmsflc RECORDING OUTPUT_DIR
+
+RECORDING is a Steam session.mpd or a video file. English lobby text only.
 """
 
 from __future__ import annotations
@@ -8,41 +10,42 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from PIL import Image
-
-from mmsflc.classify import Classifier
-from mmsflc.segment import segment
-
-
-def frame_time(path: Path) -> float:
-    return float(path.stem.replace("_", "."))
+from mmsflc.cut import export_matches
+from mmsflc.find import find_matches
+from mmsflc.segment import Match
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 1:
-        print("usage: python -m mmsflc FRAME_DIR", file=sys.stderr)
+    if len(argv) != 2:
+        print("用法: python -m mmsflc 录像 输出目录", file=sys.stderr)
         return 2
-    frame_dir = Path(argv[0])
-    frames = sorted(frame_dir.glob("*.jpg"), key=frame_time)
-    if not frames:
-        print(f"no jpg frames in {frame_dir}", file=sys.stderr)
+    recording = Path(argv[0])
+    dest = Path(argv[1])
+    if not recording.is_file():
+        print(f"找不到录像: {recording}", file=sys.stderr)
         return 1
-    classifier = Classifier()
-    samples = []
-    for path in frames:
-        info = classifier.read(Image.open(path))
-        samples.append((frame_time(path), info.kind, info.game))
-    matches = segment(samples)
+    cache = Path(__file__).resolve().parent.parent / "tmp" / "cache" / _cache_name(recording)
+    matches = find_matches(recording, cache)
     if not matches:
-        print("no matches")
+        print("没有对局")
         return 0
     for index, match in enumerate(matches, start=1):
-        game = f"sf{match.game}" if match.game else "sf?"
-        print(
-            f"{index:02d}  {game}  {_clock(match.start)} -> {_clock(match.end)}  "
-            f"({match.end - match.start:.0f}s)"
-        )
+        print(_line(index, match))
+    for path in export_matches(recording, dest, matches):
+        print(path)
     return 0
+
+
+def _cache_name(recording: Path) -> str:
+    if recording.stem == "session":
+        return recording.parent.name
+    return recording.stem
+
+
+def _line(index: int, match: Match) -> str:
+    game = f"sf{match.game}" if match.game else "sf?"
+    length = match.end - match.start
+    return f"{index:02d}  {game}  {_clock(match.start)} -> {_clock(match.end)}  ({length:.0f}s)"
 
 
 def _clock(seconds: float) -> str:

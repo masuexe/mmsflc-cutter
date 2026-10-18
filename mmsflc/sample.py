@@ -7,6 +7,10 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 
+def frame_time(path: Path) -> float:
+    return float(path.stem.replace("_", "."))
+
+
 def grab(mpd: Path, dest: Path, t: float, width: int = 640) -> Path:
     stamp = f"{t:07.1f}".replace(".", "_")
     out = dest / f"{stamp}.jpg"
