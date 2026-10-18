@@ -54,6 +54,13 @@ def grab_many(
     times: list[float],
     workers: int = 6,
     width: int = 640,
+    on_frame=None,
 ) -> list[Path]:
+    def one(t: float) -> Path:
+        path = grab(mpd, dest, t, width)
+        if on_frame is not None:
+            on_frame(path)
+        return path
+
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        return list(pool.map(lambda t: grab(mpd, dest, t, width), times))
+        return list(pool.map(one, times))

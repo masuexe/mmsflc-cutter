@@ -1,5 +1,6 @@
 """Cut finished matches out of one recording.
 
+    python -m mmsflc
     python -m mmsflc RECORDING OUTPUT_DIR
 
 RECORDING is a Steam session.mpd or a video file. A match runs from the
@@ -13,11 +14,16 @@ import sys
 from pathlib import Path
 
 from mmsflc.cut import export_matches
-from mmsflc.find import find_matches
+from mmsflc.find import cache_dir, find_matches
 from mmsflc.segment import Match
 
 
 def main(argv: list[str]) -> int:
+    if not argv:
+        from mmsflc.gui import run
+
+        run()
+        return 0
     if len(argv) != 2:
         print("用法: python -m mmsflc 录像 输出目录", file=sys.stderr)
         return 2
@@ -26,7 +32,7 @@ def main(argv: list[str]) -> int:
     if not recording.is_file():
         print(f"找不到录像: {recording}", file=sys.stderr)
         return 1
-    cache = Path(__file__).resolve().parent.parent / "tmp" / "cache" / _cache_name(recording)
+    cache = cache_dir(recording)
     matches = find_matches(recording, cache)
     if not matches:
         print("没有对局")
@@ -36,12 +42,6 @@ def main(argv: list[str]) -> int:
     for path in export_matches(recording, dest, matches):
         print(path)
     return 0
-
-
-def _cache_name(recording: Path) -> str:
-    if recording.stem == "session":
-        return recording.parent.name
-    return recording.stem
 
 
 def _line(index: int, match: Match) -> str:

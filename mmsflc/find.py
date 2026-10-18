@@ -9,6 +9,7 @@ from __future__ import annotations
 import math
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 from PIL import Image
@@ -48,6 +49,11 @@ def probe_duration(path: Path) -> float:
     return float(text)
 
 
+def cache_dir(recording: Path) -> Path:
+    name = recording.parent.name if recording.stem == "session" else recording.stem
+    return Path(__file__).resolve().parent.parent / "tmp" / "cache" / name
+
+
 def find_matches(
     recording: Path,
     cache: Path,
@@ -55,13 +61,29 @@ def find_matches(
 ) -> list[Match]:
     duration = probe_duration(recording)
     times = _seconds(0, duration, STEP, duration)
-    log(f"每 {STEP} 秒抽一帧（{len(times)} 帧）")
+    total = len(times)
+    log(f"每 {STEP} 秒抽一帧（{total} 帧）")
+    done = 0
+    lock = threading.Lock()
+
+    def on_frame(_path: Path) -> None:
+        nonlocal done
+        with lock:
+            done += 1
+            current = done
+        if current == 1 or current == total or current % 100 == 0:
+            log(f"抽帧 {current}/{total}")
+
+    paths = grab_many(recording, cache, times, on_frame=on_frame)
+    log("正在识别画面")
     reader = SplashReader()
     samples = []
-    for path in grab_many(recording, cache, times):
+    for index, path in enumerate(paths, start=1):
         with Image.open(path) as image:
             splash = reader.read(image)
         samples.append((frame_time(path), splash.kind, splash.game))
+        if index == total or index % 400 == 0:
+            log(f"识别 {index}/{total}")
     samples.sort()
     return matches(samples)
 
