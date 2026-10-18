@@ -1,0 +1,42 @@
+"""Write one match out of a Steam recording without re-encoding."""
+
+from __future__ import annotations
+
+import subprocess
+from pathlib import Path
+
+from mmsflc.segment import Match
+
+
+def cut_match(mpd: Path, match: Match, dest: Path, index: int) -> Path:
+    dest.mkdir(parents=True, exist_ok=True)
+    game = match.game if match.game else 0
+    out = dest / f"{index:02d}_sf{game}.mp4"
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-allowed_extensions",
+            "ALL",
+            "-ss",
+            f"{match.start:.3f}",
+            "-to",
+            f"{match.end:.3f}",
+            "-i",
+            str(mpd),
+            "-map",
+            "0:v:0",
+            "-map",
+            "0:a:0",
+            "-c",
+            "copy",
+            "-movflags",
+            "+faststart",
+            str(out),
+        ],
+        check=True,
+    )
+    return out
