@@ -23,8 +23,10 @@ def grab(mpd: Path, dest: Path, t: float, width: int = 640) -> Path:
         "-hide_banner",
         "-loglevel",
         "error",
-        "-allowed_extensions",
-        "ALL",
+    ]
+    if Path(mpd).suffix == ".mpd":
+        command += ["-allowed_extensions", "ALL"]
+    command += [
         "-ss",
         f"{t:.3f}",
         "-i",
