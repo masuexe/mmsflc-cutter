@@ -2,7 +2,9 @@
 
     python -m mmsflc RECORDING OUTPUT_DIR
 
-RECORDING is a Steam session.mpd or a video file. English lobby text only.
+RECORDING is a Steam session.mpd or a video file. A match runs from the
+VS intro through the full-screen win/loss result. The two gameplay screens
+can be moved or resized. English and Chinese both work.
 """
 
 from __future__ import annotations
